@@ -1,8 +1,27 @@
 from flask import Flask, request, render_template
 import pandas as pd
 from terrorism_model import TerrorismModel
+import requests
+import os
 
 app = Flask(__name__)
+
+# Function to download file from Google Drive
+def download_file_from_google_drive(file_id, destination):
+    URL = f"https://drive.google.com/uc?id={file_id}"
+    session = requests.Session()
+    response = session.get(URL, stream=True)
+    
+    with open(destination, 'wb') as fd:
+        for chunk in response.iter_content(chunk_size=128):
+            fd.write(chunk)
+
+# Download the GTD.csv file
+file_id = '1z_lQyGMGm3KHY2BDJvzRkqhsU8hp6uE1'
+destination = 'GTD.csv'
+
+if not os.path.exists(destination):
+    download_file_from_google_drive(file_id, destination)
 
 @app.route('/')
 def index():
