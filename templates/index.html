@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terrorism Attack Prediction</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="#">Terrorism Prediction</a>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="card shadow">
+            <div class="card-body">
+                <h1 class="card-title text-center mb-4">Terrorism Attack Prediction in Africa</h1>
+                <p class="text-center">Upload the dataset to predict attack types and visualize them on the map of Africa.</p>
+
+                <form action="/predict" method="POST" enctype="multipart/form-data" class="text-center">
+                    <div class="form-group">
+                        <input type="file" class="form-control-file" id="file" name="file" accept=".csv" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Predict</button>
+                </form>
+                
+                {% if report %}
+                <div class="mt-5">
+                    <h2 class="text-center">Model Report</h2>
+                    <pre class="bg-light p-3">{{ report }}</pre>
+                    <h3 class="text-center">Model Accuracy: {{ accuracy }}</h3>
+                </div>
+                {% endif %}
+                
+                {% if map_html %}
+                <div class="mt-5">
+                    <h2 class="text-center">Predicted Attack Locations</h2>
+                    <div id="map" class="map-container">
+                        {{ map_html|safe }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer mt-auto py-3 bg-dark text-white text-center">
+        <div class="container">
+            <span>&copy; 2024 Terrorism Prediction. All rights reserved.</span>
+        </div>
+    </footer>
+</body>
+</html>

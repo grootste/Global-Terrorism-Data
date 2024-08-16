@@ -1,0 +1,106 @@
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from lightgbm import LGBMClassifier
+from sklearn.metrics import classification_report, accuracy_score
+
+class TerrorismModel:
+    def __init__(self):
+        # This is where you might load a pre-trained model or set up other initialization
+        pass
+
+    def preprocess_data(self, df):
+        african_countries = [
+            "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi", "Cabo Verde", 
+            "Cameroon", "Central African Republic", "Chad", "Comoros", "Democratic Republic of the Congo", 
+            "Djibouti", "Egypt", "Equatorial Guinea", "Eritrea", "Eswatini", "Ethiopia", "Gabon", 
+            "Gambia", "Ghana", "Guinea", "Guinea-Bissau", "Ivory Coast", "Kenya", "Lesotho", "Liberia", 
+            "Libya", "Madagascar", "Malawi", "Mali", "Mauritania", "Mauritius", "Morocco", "Mozambique", 
+            "Namibia", "Niger", "Nigeria", "Republic of the Congo", "Rwanda", "São Tomé and Príncipe", 
+            "Senegal", "Seychelles", "Sierra Leone", "Somalia", "South Africa", "South Sudan", "Sudan", 
+            "Tanzania", "Togo", "Tunisia", "Uganda", "Zambia", "Zimbabwe"
+        ]
+
+        africa_df = df[df['country_txt'].isin(african_countries)]
+
+        selected_columns = [
+            'iyear', 'imonth', 'iday', 'latitude', 'longitude', 'country',
+            'country_txt', 'region', 'region_txt', 'provstate', 'city', 'multiple',
+            'success', 'suicide', 'targtype1','targtype1_txt', 'weaptype1',
+            'weaptype1_txt', 'gname', 'attacktype1_txt', 'attacktype1', 'target1',
+            'natlty1', 'natlty1_txt', 'nkill', 'property', 'dbsource'
+        ]
+
+        attack_type_df = africa_df[selected_columns]
+
+        # Filling in null values for Latitude and Longitude
+        avg_lat_long = attack_type_df.groupby('country_txt')[['latitude', 'longitude']].mean().reset_index()
+
+        attack_type_df = attack_type_df.merge(avg_lat_long, on='country_txt', suffixes=('', '_avg'))
+
+        attack_type_df['latitude'].fillna(attack_type_df['latitude_avg'], inplace=True)
+        attack_type_df['longitude'].fillna(attack_type_df['longitude_avg'], inplace=True)
+
+        attack_type_df.drop(columns=['latitude_avg', 'longitude_avg'], inplace=True)
+
+        avg_nkill = attack_type_df.groupby('country_txt')['nkill'].mean().reset_index()
+
+        attack_type_df = attack_type_df.merge(avg_nkill, on='country_txt', suffixes=('', '_avg'))
+
+        attack_type_df['nkill'].fillna(attack_type_df['nkill_avg'], inplace=True)
+
+        attack_type_df.drop(columns=['nkill_avg'], inplace=True)
+
+        attack_type_df.dropna(subset=['provstate', 'city', 'target1'], inplace=True)
+
+        attack_type_df['natlty1'].fillna('Unknown', inplace=True)
+        attack_type_df['natlty1_txt'].fillna('Unknown', inplace=True)
+
+        categorical_cols_high_cardinality = ['provstate', 'city', 'gname', 'target1', 'natlty1', 'natlty1_txt']
+
+        label_encoder = LabelEncoder()
+
+        for col in categorical_cols_high_cardinality:
+            attack_type_df[col + '_encoded'] = label_encoder.fit_transform(attack_type_df[col].astype(str))
+
+        attack_type_df.drop(columns=categorical_cols_high_cardinality, inplace=True)
+
+        object_columns_to_drop = ['country_txt', 'region_txt', 'targtype1_txt', 'weaptype1_txt', 'attacktype1_txt']
+
+        attack_type_df.drop(columns=object_columns_to_drop, inplace=True)
+
+        one_hot_encoded_dbsource = pd.get_dummies(attack_type_df['dbsource'], prefix='dbsource')
+
+        encoded_df = pd.concat([attack_type_df, one_hot_encoded_dbsource], axis=1)
+
+        encoded_df.drop(columns=['dbsource'], inplace=True)
+
+        encoded_df.columns = encoded_df.columns.str.replace('dbsource_', '')
+
+        classes_to_remove = [4, 5, 8]
+        filtered_df = encoded_df[~encoded_df['attacktype1'].isin(classes_to_remove)]
+
+        return encoded_df, filtered_df
+
+    def train_lightgbm_model(self, X_train, y_train):
+        lgbm = LGBMClassifier(learning_rate=0.1, max_depth=15, num_leaves=40, verbose=-1)
+        lgbm.fit(X_train, y_train)
+        return lgbm
+
+    def deployable_function(self, data_path='gtd.csv'):
+        df = pd.read_csv(data_path, encoding='latin-1')
+        encoded_df, filtered_df = self.preprocess_data(df)
+
+        X = filtered_df.drop(columns=['attacktype1'])
+        y = filtered_df['attacktype1']
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        trained_model = self.train_lightgbm_model(X_train, y_train)
+
+        y_pred = trained_model.predict(X_test)
+
+        report = classification_report(y_test, y_pred)
+        accuracy = accuracy_score(y_test, y_pred)
+
+        return trained_model, report, accuracy
