@@ -27,13 +27,13 @@ class TerrorismModel:
         ]
 
     def preprocess_data(self, df):
+        # Filter data for African countries and select the required columns
         africa_df = df[df['country_txt'].isin(self.african_countries)]
         attack_type_df = africa_df[self.selected_columns]
-        attack_type_df = self.fill_null_values(attack_type_df)
-        encoded_df = self.encode_categorical_data(attack_type_df)
-        return encoded_df
+        return attack_type_df
 
     def fill_null_values(self, df):
+        # Fill null values separately for latitude, longitude, and number of kills
         avg_lat_long = df.groupby('country_txt')[['latitude', 'longitude']].mean().reset_index()
         df = df.merge(avg_lat_long, on='country_txt', suffixes=('', '_avg'))
         df['latitude'].fillna(df['latitude_avg'], inplace=True)
@@ -45,20 +45,24 @@ class TerrorismModel:
         df['nkill'].fillna(df['nkill_avg'], inplace=True)
         df.drop(columns=['nkill_avg'], inplace=True)
 
+        # Drop rows with missing values in important categorical columns
         df.dropna(subset=['provstate', 'city', 'target1'], inplace=True)
         df['natlty1'].fillna('Unknown', inplace=True)
         df['natlty1_txt'].fillna('Unknown', inplace=True)
         return df
 
     def encode_categorical_data(self, df):
+        # Encode high-cardinality categorical columns using category codes
         categorical_cols_high_cardinality = ['provstate', 'city', 'gname', 'target1', 'natlty1', 'natlty1_txt']
         for col in categorical_cols_high_cardinality:
             df[col + '_encoded'] = df[col].astype('category').cat.codes
         df.drop(columns=categorical_cols_high_cardinality, inplace=True)
 
+        # Drop other irrelevant object columns
         object_columns_to_drop = ['country_txt', 'region_txt', 'targtype1_txt', 'weaptype1_txt', 'attacktype1_txt']
         df.drop(columns=object_columns_to_drop, inplace=True)
 
+        # One-hot encode the 'dbsource' column
         one_hot_encoded_dbsource = pd.get_dummies(df['dbsource'], prefix='dbsource')
         df = pd.concat([df, one_hot_encoded_dbsource], axis=1)
         df.drop(columns=['dbsource'], inplace=True)
@@ -66,44 +70,65 @@ class TerrorismModel:
         return df
 
     def train_model(self, X_train, y_train):
+        # Train a LightGBM model with specified hyperparameters
         lgbm = LGBMClassifier(learning_rate=0.1, max_depth=15, num_leaves=40, verbose=-1)
         lgbm.fit(X_train, y_train)
         return lgbm
 
     def deploy_model(self, df, training=True):
-        encoded_df = self.preprocess_data(df)
+        # Preprocess the data
+        df = self.preprocess_data(df)
 
-        classes_to_remove = [4, 5, 8] 
-        filtered_df = encoded_df[~encoded_df['attacktype1'].isin(classes_to_remove)]
+        # Temporal split to avoid data leakage: Training data (1970-2015) and Test data (2016-2020)
+        train_df = df[df['iyear'] <= 2015]
+        test_df = df[df['iyear'] > 2015]
 
-        X = filtered_df.drop(columns=['attacktype1'])
-        y = filtered_df['attacktype1']
+        # Fill missing values separately for training and test data
+        train_df = self.fill_null_values(train_df)
+        test_df = self.fill_null_values(test_df)
+
+        # Encode categorical data separately for training and test data
+        train_df = self.encode_categorical_data(train_df)
+        test_df = self.encode_categorical_data(test_df)
+
+        # Remove certain classes from the dataset
+        classes_to_remove = [4, 5, 8]
+        train_df = train_df[~train_df['attacktype1'].isin(classes_to_remove)]
+        test_df = test_df[~test_df['attacktype1'].isin(classes_to_remove)]
+
+        # Split data into features (X) and target (y)
+        X_train = train_df.drop(columns=['attacktype1'])
+        y_train = train_df['attacktype1']
+
+        X_test = test_df.drop(columns=['attacktype1'])
+        y_test = test_df['attacktype1']
 
         if training or not os.path.exists('terrorism_model.pkl'):
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            # Train the model if training mode is enabled or model does not exist
             trained_model = self.train_model(X_train, y_train)
-
-            # Save the model
             joblib.dump(trained_model, 'terrorism_model.pkl')
         else:
             # Load the model if it's already trained
             trained_model = joblib.load('terrorism_model.pkl')
-            X_test, y_test = X, y  # Use all data for prediction in this case
 
+        # Predict on the test set
         y_pred = trained_model.predict(X_test)
 
+        # Generate a classification report and calculate accuracy
         report = classification_report(y_test, y_pred)
         accuracy = accuracy_score(y_test, y_pred)
 
-        # Visualize predictions
+        # Visualize the predictions on the map
         X_test['predicted_attacktype1'] = y_pred
         map_html = self.visualize_predictions(X_test)
 
         return trained_model, report, accuracy, map_html
 
     def visualize_predictions(self, df):
+        # Create a map centered on Africa
         africa_map = folium.Map(location=[1.650801, 10.267895], zoom_start=4)
 
+        # Mapping of attack types to labels
         attack_type_labels = {
             1: 'Assassination',
             2: 'Armed Assault',
@@ -113,6 +138,7 @@ class TerrorismModel:
             9: 'Unknown'
         }
         
+        # Add markers to the map for each attack
         for _, row in df.iterrows():
             folium.Marker(
                 location=[row['latitude'], row['longitude']],
@@ -120,4 +146,5 @@ class TerrorismModel:
                 icon=folium.Icon(color="red", icon="info-sign")
             ).add_to(africa_map)
 
+        # Return the HTML representation of the map
         return africa_map._repr_html_()
