@@ -71,17 +71,16 @@ class TerrorismModel:
         return lgbm
 
     def deploy_model(self, df, training=True):
+        encoded_df = self.preprocess_data(df)
+
+        classes_to_remove = [4, 5, 8] 
+        filtered_df = encoded_df[~encoded_df['attacktype1'].isin(classes_to_remove)]
+
+        X = filtered_df.drop(columns=['attacktype1'])
+        y = filtered_df['attacktype1']
+
         if training or not os.path.exists('terrorism_model.pkl'):
-            encoded_df = self.preprocess_data(df)
-
-            classes_to_remove = [4, 5, 8] 
-            filtered_df = encoded_df[~encoded_df['attacktype1'].isin(classes_to_remove)]
-
-            X = filtered_df.drop(columns=['attacktype1'])
-            y = filtered_df['attacktype1']
-
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
             trained_model = self.train_model(X_train, y_train)
 
             # Save the model
@@ -89,6 +88,7 @@ class TerrorismModel:
         else:
             # Load the model if it's already trained
             trained_model = joblib.load('terrorism_model.pkl')
+            X_test, y_test = X, y  # Use all data for prediction in this case
 
         y_pred = trained_model.predict(X_test)
 
