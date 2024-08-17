@@ -30,7 +30,7 @@ class TerrorismModel:
             2: 'Armed Assault',
             3: 'Bombing/Explosion',
             6: 'Kidnapping',
-            7: 'Facility/Infrastructure Attack',
+            7: 'Facility Attack',
             9: 'Unknown'
         }
 
@@ -143,7 +143,7 @@ class TerrorismModel:
             2: 'Armed Assault',
             3: 'Bombing/Explosion',
             6: 'Kidnapping',
-            7: 'Facility/Infrastructure Attack',
+            7: 'Facility Attack',
             9: 'Unknown'
         }
         
