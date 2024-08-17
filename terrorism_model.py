@@ -25,6 +25,14 @@ class TerrorismModel:
             'weaptype1_txt', 'gname', 'attacktype1_txt', 'attacktype1', 'target1',
             'natlty1', 'natlty1_txt', 'nkill', 'property', 'dbsource'
         ]
+        self.label_mapping = {
+            1: 'Assassination',
+            2: 'Armed Assault',
+            3: 'Bombing/Explosion',
+            6: 'Kidnapping',
+            7: 'Facility/Infrastructure Attack',
+            9: 'Unknown'
+        }
 
     def preprocess_data(self, df):
         # Filter data for African countries and select the required columns
@@ -114,8 +122,9 @@ class TerrorismModel:
         # Predict on the test set
         y_pred = trained_model.predict(X_test)
 
-        # Generate a classification report and calculate accuracy
-        report = classification_report(y_test, y_pred)
+        # Generate a classification report with text labels
+        target_names = [self.label_mapping[i] for i in sorted(self.label_mapping.keys())]
+        report = classification_report(y_test, y_pred, target_names=target_names)
         accuracy = accuracy_score(y_test, y_pred)
 
         # Visualize the predictions on the map
