@@ -39,12 +39,14 @@ def predict():
     if file:
         df = pd.read_csv(file, encoding='latin-1')
         
-        # Initialize and deploy the model
+        # Initialize the model
         model = TerrorismModel()
-        trained_model, report, accuracy, map_html = model.deploy_model(df)
+
+        # Deploy the model (load or train)
+        trained_model, report, accuracy, map_html = model.deploy_model(df, training=False)
         
         return render_template('index.html', report=report, accuracy=accuracy, map_html=map_html)
 
 if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
     #app.run(debug=True)
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080))) #Render

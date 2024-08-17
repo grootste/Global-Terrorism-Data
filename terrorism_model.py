@@ -3,7 +3,8 @@ from sklearn.model_selection import train_test_split
 from lightgbm import LGBMClassifier
 from sklearn.metrics import classification_report, accuracy_score
 import folium
-from IPython.display import display
+import os
+import joblib
 
 class TerrorismModel:
     def __init__(self):
@@ -69,18 +70,25 @@ class TerrorismModel:
         lgbm.fit(X_train, y_train)
         return lgbm
 
-    def deploy_model(self, df):
-        encoded_df = self.preprocess_data(df)
+    def deploy_model(self, df, training=True):
+        if training or not os.path.exists('terrorism_model.pkl'):
+            encoded_df = self.preprocess_data(df)
 
-        classes_to_remove = [4, 5, 8] 
-        filtered_df = encoded_df[~encoded_df['attacktype1'].isin(classes_to_remove)]
+            classes_to_remove = [4, 5, 8] 
+            filtered_df = encoded_df[~encoded_df['attacktype1'].isin(classes_to_remove)]
 
-        X = filtered_df.drop(columns=['attacktype1'])
-        y = filtered_df['attacktype1']
+            X = filtered_df.drop(columns=['attacktype1'])
+            y = filtered_df['attacktype1']
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-        trained_model = self.train_model(X_train, y_train)
+            trained_model = self.train_model(X_train, y_train)
+
+            # Save the model
+            joblib.dump(trained_model, 'terrorism_model.pkl')
+        else:
+            # Load the model if it's already trained
+            trained_model = joblib.load('terrorism_model.pkl')
 
         y_pred = trained_model.predict(X_test)
 
