@@ -29,7 +29,7 @@
                 <div class="mt-5">
                     <h2 class="text-center">Model Report</h2>
                     <pre class="bg-light p-3">{{ report }}</pre>
-                    <h3 class="text-center">Model Accuracy: {{ accuracy }}</h3>
+                    <h3 class="text-center accuracy-container">Model Accuracy: {{ accuracy|round(5) }}</h3>
                 </div>
                 {% endif %}
                 
