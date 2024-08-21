@@ -1,6 +1,2 @@
 [build]
-  command = "pip install -r requirements.txt && gunicorn app:app --bind 0.0.0.0:$PORT"
-
-[build.environment]
-  PORT = "8080"
-
+  command = "pip install -r requirements.txt && gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120"
