@@ -50,12 +50,14 @@ class TerrorismModel:
 
         avg_nkill = df.groupby('country_txt')['nkill'].mean().reset_index()
         df = df.merge(avg_nkill, on='country_txt', suffixes=('', '_avg'))
-        df['nkill'].fillna(df['nkill_avg'], inplace=True)
+        #df['nkill'].fillna(df['nkill_avg'], inplace=True)
+        df['nkill'] = df['nkill'].fillna(df['nkill_avg'])
         df.drop(columns=['nkill_avg'], inplace=True)
 
         # Drop rows with missing values in important categorical columns
         df.dropna(subset=['provstate', 'city', 'target1'], inplace=True)
-        df['natlty1'].fillna('Unknown', inplace=True)
+        #df['natlty1'].fillna('Unknown', inplace=True)
+        df['natlty1'] = df['natlty1'].astype(str).fillna('Unknown')
         df['natlty1_txt'].fillna('Unknown', inplace=True)
         return df
 
