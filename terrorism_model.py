@@ -44,10 +44,13 @@ class TerrorismModel:
         # Fill null values separately for latitude, longitude, and number of kills
         avg_lat_long = df.groupby('country_txt')[['latitude', 'longitude']].mean().reset_index()
         df = df.merge(avg_lat_long, on='country_txt', suffixes=('', '_avg'))
-        df['latitude'].fillna(df['latitude_avg'], inplace=True)
-        df['longitude'].fillna(df['longitude_avg'], inplace=True)
+        #df['latitude'].fillna(df['latitude_avg'], inplace=True)
+        #df['longitude'].fillna(df['longitude_avg'], inplace=True)
+        df['latitude'] = df['latitude'].fillna(df['latitude_avg'])
+        df['longitude'] = df['longitude'].fillna(df['longitude_avg'])
         df.drop(columns=['latitude_avg', 'longitude_avg'], inplace=True)
-
+       
+        
         avg_nkill = df.groupby('country_txt')['nkill'].mean().reset_index()
         df = df.merge(avg_nkill, on='country_txt', suffixes=('', '_avg'))
         #df['nkill'].fillna(df['nkill_avg'], inplace=True)
@@ -58,7 +61,7 @@ class TerrorismModel:
         df.dropna(subset=['provstate', 'city', 'target1'], inplace=True)
         #df['natlty1'].fillna('Unknown', inplace=True)
         df['natlty1'] = df['natlty1'].astype(str).fillna('Unknown')
-        df['natlty1_txt'].fillna('Unknown', inplace=True)
+        df['natlty1_txt'] = df['natlty1_txt'].astype(str).fillna('Unknown')
         return df
 
     def encode_categorical_data(self, df):
