@@ -36,6 +36,18 @@
                 {% if map_html %}
                 <div class="mt-5">
                     <h2 class="text-center">Predicted Attack Locations</h2>
+
+                    
+                                        <!-- Filter Buttons -->
+                    <div class="text-center mb-3">
+                        <button class="btn btn-secondary filter-btn" data-filter="all">Show All</button>
+                        <button class="btn btn-secondary filter-btn" data-filter="bombing">Bombings</button>
+                        <button class="btn btn-secondary filter-btn" data-filter="assassination">Assassinations</button>
+                        <button class="btn btn-secondary filter-btn" data-filter="armed_assault">Armed Assaults</button>
+                    </div>
+
+
+                    
                     <div id="map" class="map-container">
                         {{ map_html|safe }}
                     </div>
@@ -50,5 +62,22 @@
             <span>&copy; 2024 Terrorism Prediction. All rights reserved.</span>
         </div>
     </footer>
+
+    
+                <!-- JavaScript to handle button clicks and update the map -->
+            <script>
+                document.querySelectorAll('.filter-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const filter = this.getAttribute('data-filter');
+                        fetch(`/filter_map?filter=${filter}`)
+                            .then(response => response.text())
+                            .then(html => {
+                                document.getElementById('map').innerHTML = html;
+                            });
+                    });
+                });
+            </script>
+
+
 </body>
 </html>
