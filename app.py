@@ -70,7 +70,7 @@ def filter_data(filter_type):
     elif filter_type == "armed_assault":
         return [data for data in your_data if data['attack_type'] == 'Armed Assault']
     else:
-        return your_data  # Show all data if filter is "all"
+        return df  # Show all data if filter is "all"
 
 def generate_map(filtered_data):
     folium_map = folium.Map(location=[0, 0], zoom_start=2)
