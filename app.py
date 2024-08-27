@@ -47,6 +47,42 @@ def predict():
         
         return render_template('index.html', report=report, accuracy=accuracy, map_html=map_html)
 
+
+@app.route('/filter_map')
+def filter_map():
+    filter_type = request.args.get('filter')
+    
+    # Logic to filter your data based on the filter_type
+    filtered_data = filter_data(filter_type)
+    
+    # Generate the map with filtered data
+    folium_map = generate_map(filtered_data)
+    map_html = folium_map._repr_html_()
+
+    return map_html
+
+def filter_data(filter_type):
+    # Example logic to filter data
+    if filter_type == "bombing":
+        return [data for data in your_data if data['attack_type'] == 'Bombing']
+    elif filter_type == "assassination":
+        return [data for data in your_data if data['attack_type'] == 'Assassination']
+    elif filter_type == "armed_assault":
+        return [data for data in your_data if data['attack_type'] == 'Armed Assault']
+    else:
+        return your_data  # Show all data if filter is "all"
+
+def generate_map(filtered_data):
+    folium_map = folium.Map(location=[0, 0], zoom_start=2)
+    for item in filtered_data:
+        folium.Marker(
+            location=[item['latitude'], item['longitude']],
+            popup=item['attack_type']
+        ).add_to(folium_map)
+    return folium_map
+
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
     #app.run(debug=True)
